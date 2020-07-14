@@ -1,0 +1,47 @@
+---
+- hosts: ubuntu-box
+  become: true
+  become_user: root
+  tasks:
+    - name: Update apt repo and cache on all Debian/Ubuntu boxes
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+    - name: Upgrade all packages on servers
+      apt: upgrade=dist force_apt_get=yes
+
+    - name: Check if a reboot is needed on all servers
+      register: reboot_required_file
+      stat: path=/var/run/reboot-required get_md5=no
+
+    - name: Install required packages
+      apt: name={{ item }} state=installed
+      with_items:
+        - xfce4
+        - build-essential
+        - xfce4-goodies
+        - xorg
+        - dbus-x11
+        - git
+        - x11-xserver-utils
+        - xrdp
+      tags:
+        - packages
+
+    - name: start xrdp service
+      become: yes
+      service:
+        name: xrdp
+        state: started
+
+    - name: adding existing user xrdp to group sudo
+      become: yes
+      user:
+        name: xrdp
+        groups: ssl-cert
+        append: yes
+
+    - name: start xrdp service
+      become: yes
+      service:
+        name: xrdp
+        state: restarted
